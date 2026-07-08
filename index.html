@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shah Trade Pro - Advanced Matrix Workstation</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        :root {
+            --bg-color: #08090c;
+            --card-bg: #101114;
+            --text-main: #f0f2f5;
+            --text-sub: #67707b;
+            --border-color: #1c1e24;
+            --buy-color: #0ecb81;
+            --sell-color: #f6465d;
+            --accent-color: #f0b90b;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-main);
+            margin: 0; padding: 0; height: 100vh; width: 100vw;
+            display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;
+        }
+
+        .navbar {
+            height: 28px; background-color: var(--card-bg); border-bottom: 1px solid var(--border-color);
+            padding: 0 8px; display: flex; justify-content: space-between; align-items: center; z-index: 10;
+        }
+        .navbar h1 { color: var(--accent-color); font-size: 12px; font-weight: bold; margin: 0; }
+        .nav-meta { display: flex; align-items: center; gap: 8px; font-size: 9.5px; }
+
+        .dashboard-grid { 
+            display: grid; grid-template-columns: 200px 1fr 230px; 
+            height: calc(100vh - 28px); width: 100vw; box-sizing: border-box;
+        }
+
+        .panel-column {
+            background: var(--card-bg); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 3px; box-sizing: border-box; height: 100%; overflow: hidden;
+        }
+        .panel-column:last-child { border-right: none; }
+
+        .card-sec {
+            background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 2px;
+            padding: 3px; margin-bottom: 3px; box-sizing: border-box;
+        }
+        .card-sec:last-child { margin-bottom: 0; }
+
+        h2 { font-size: 9.5px; margin: 0 0 2px 0; font-weight: bold; text-transform: uppercase; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 1px; }
+        h3 { font-size: 8.5px; margin: 0 0 1px 0; text-transform: uppercase; color: var(--text-sub); }
+        
+        .balance-strip { display: flex; justify-content: space-between; align-items: center; background: rgba(240,185,11,0.02); padding: 2px 4px; }
+        .price-text { font-size: 13px; font-weight: bold; color: var(--accent-color); margin: 0; }
+
+        input, select { 
+            width: 100%; padding: 1px 3px; margin: 1px 0; border: 1px solid var(--border-color); 
+            background: var(--bg-color); color: var(--text-main); border-radius: 2px; font-size: 9.5px; box-sizing: border-box; height: 16px;
+        }
+
+        .display-list-box {
+            flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color); padding: 2px; border-radius: 2px; font-size: 9.5px; box-sizing: border-box;
+        }
+        
+        .flex-row-item { display: flex; justify-content: space-between; padding: 0.5px 0; border-bottom: 1px solid rgba(255,255,255,0.01); align-items: center; font-size: 9.5px; }
+        
+        #chart-grid-wrapper { display: grid; grid-template-columns: 1fr; gap: 2px; width: 100%; height: 160px; margin-bottom: 2px; }
+        .chart-frame { width: 100%; height: 100%; border: 1px solid var(--border-color); border-radius: 2px; overflow: hidden; position: relative; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+        
+        button { 
+            background-color: var(--accent-color); color: #000; border: none; width: 100%;
+            padding: 1px 0; border-radius: 2px; cursor: pointer; font-size: 9.5px; font-weight: bold; height: 16px; margin-top: 1px;
+        }
+        button:hover { opacity: 0.85; }
+
+        .panic-btn { background: var(--sell-color) !important; color: #fff !important; font-weight: 900; }
+
+        .timeframe-bar { display: flex; gap: 2px; margin-bottom: 2px; background: var(--border-color); padding: 1px; border-radius: 2px; align-items: center; }
+        .timeframe-btn { background: none; color: var(--text-sub); border: none; font-size: 8.5px; padding: 1px 2px; height: auto; width: auto; margin: 0; }
+        .timeframe-btn.active { background: var(--bg-color); color: var(--text-main); border-radius: 1px; }
+
+        .heatmap-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 1px; background: rgba(0,0,0,0.2); padding: 2px; border: 1px solid var(--border-color); height: 26px; overflow: hidden; }
+        .heatmap-cell { font-size: 7px; text-align: center; font-weight: bold; padding: 1px 0; border-radius: 1px; color: #fff; cursor: pointer; }
+
+        .sub-tab-panel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-bottom: 2px; }
+        .sub-tab-btn { background: #1c1e24; color: var(--text-sub); height: 14px; font-size: 8px; padding: 0; border-radius: 0; }
+        .sub-tab-btn.active { background: var(--accent-color); color: #000; }
+
+        .orderbook-row { display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 9px; padding: 0.5px 0; font-family: monospace; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>📈 SHAH TRADE PRO Matrix v2</h1>
+        <div class="nav-meta">
+            <span style="color:#0ecb81;">Ping: <span id="network-ping">14ms</span></span>
+            <span id="analytics-winrate" style="color:var(--buy-color); font-weight:bold;">Win Rate: 0%</span>
+            <span>● QUANT CORES SYNCED</span>
+            <button id="nav-logout" class="hidden" style="width:auto; height:14px; padding:0 3px; background:#222; color:#fff;" onclick="logout()">Exit</button>
+        </div>
+    </div>
+
+    <div class="container" style="height:100%;">
+        <div id="auth-screen" style="display:flex; justify-content:center; align-items:center; height:60vh;">
+            <div style="background:var(--card-bg); padding:10px; border-radius:3px; width:220px; border:1px solid var(--border-color);">
+                <h2>Terminal Authentication</h2>
+                <input type="text" id="username" placeholder="Username">
+                <input type="password" id="password" placeholder="Password">
+                <h3 style="margin-top:3px;">Date of Birth</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:1px;">
+                    <select id="dob-day"></select>
+                    <select id="dob-month"><option value="1">Jan</option></select>
+                    <select id="dob-year"></select>
+                </div>
+                <input type="text" id="auth-2fa" placeholder="2FA App Token (e.g., 123456)" style="margin-top:4px; border-color:#29b6f6;">
+                <button onclick="handleAuth()">Secure Sign In</button>
+            </div>
+        </div>
+
+        <div id="dashboard-screen" class="dashboard-grid hidden">
+            
+            <div class="panel-column">
+                <h2>📈 Live Matrix & Volatility Heatmap</h2>
+                <div class="heatmap-grid" id="heatmap-container"></div>
+                
+                <div id="watchlist-box" class="display-list-box" style="margin-top:2px; margin-bottom:2px;"></div>
+                
+                <div class="card-sec">
+                    <h2>Allocation & Curve</h2>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px;">
+                        <div id="allocation-legend-box" style="font-size:8px; color:var(--text-sub);"></div>
+                        <div style="font-size:8px; color:#29b6f6; border-left:1px solid var(--border-color); padding-left:2px;">
+                            <div>Equity Peak:</div>
+                            <div id="equity-peak-val" style="color:#fff; font-weight:bold;">$25000</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-column">
+                <div class="balance-strip card-sec">
+                    <div>
+                        <h3>Net Valuation</h3>
+                        <p class="price-text">$<span id="balance-display">0.00</span></p>
+                    </div>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button class="panic-btn" style="width:70px; height:20px; font-size:9px;" onclick="triggerGlobalPanicCloseAll()">PANIC</button>
+                        <div style="text-align: right;">
+                            <h3>Free Margin</h3>
+                            <span style="font-weight:bold; font-size:10px;">$<span id="available-display">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeframe-bar">
+                    <button class="timeframe-btn active" id="tf-1s" onclick="switchChartTimeframe(1)">1s</button>
+                    <button class="timeframe-btn" id="tf-1m" onclick="switchChartTimeframe(60)">1m</button>
+                    <button id="sma-toggle-btn" class="timeframe-btn" style="color:#e040fb; margin-left:4px;" onclick="toggleSmaIndicator()">SMA (Off)</button>
+                    <button id="rsi-toggle-btn" class="timeframe-btn" style="color:#29b6f6;" onclick="toggleRsiIndicator()">RSI (Off)</button>
+                    
+                    <select id="grid-layout-select" onchange="changeChartGridLayout()" style="width:65px; height:13px; font-size:8px; padding:0; margin-left:2px;">
+                        <option value="1x1">1x1 Chart</option>
+                        <option value="1x2">1x2 Split</option>
+                    </select>
+                    
+                    <select id="chart-style-select" onchange="changeChartStyle()" style="width:50px; height:13px; font-size:8px; padding:0; margin-left:2px;">
+                        <option value="candles">Candle</option>
+                        <option value="line">Line</option>
+                    </select>
+                    <span id="active-chart-token" style="margin-left:auto; font-size:8.5px; color:var(--accent-color); font-weight:bold;">BTC</span>
+                </div>
+
+                <div id="chart-grid-wrapper">
+                    <div class="chart-frame" id="chart-container-1"></div>
+                    <div class="chart-frame hidden" id="chart-container-2"></div>
+                </div>
+
+                <div class="action-grid">
+                    <div class="card-sec">
+                        <h2>Spot Desk & Collateral</h2>
+                        <select id="asset-select" onchange="switchChartFocusAsset()"></select>
+                        <input type="number" id="asset-qty" placeholder="Quantity Size" step="0.001">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                            <button style="background:var(--buy-color); color:#fff;" onclick="handleExchangeAction('buy')">Buy</button>
+                            <button style="background:var(--sell-color); color:#fff;" onclick="handleExchangeAction('sell')">Sell</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px; margin-top:2px;">
+                            <select id="deposit-source-select" style="height:14px; font-size:8px;">
+                                <option value="Bank Wire">Bank Wire</option>
+                                <option value="Card Merchant">Card Merchant</option>
+                                <option value="External Web3">External Web3</option>
+                            </select>
+                            <button style="background:#1c1e24; color:#fff; height:14px; margin:0;" onclick="handleCashAction('deposit')">+ Fund</button>
+                        </div>
+                        <input type="number" id="cash-amount" placeholder="Funding Amount ($)" style="margin-top:2px; height:14px;">
+                    </div>
+
+                    <div class="card-sec">
+                        <h2>Perpetuals & Risk Engines</h2>
+                        <input type="number" id="futures-margin" placeholder="Margin ($)" oninput="runLiveLeverageEstimator()">
+                        <select id="futures-leverage" onchange="runLiveLeverageEstimator()">
+                            <option value="5">5x Leverage</option>
+                            <option value="20">20x Leverage</option>
+                            <option value="100">100x Leverage</option>
+                        </select>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px; font-size:8px; color:var(--text-sub); margin:1px 0;">
+                            <div>Est. Liq: <span id="calc-liq" style="color:var(--sell-color);">-</span></div>
+                            <div>R:R Ratio: <span id="calc-rr" style="color:#0ecb81;">-</span></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; margin-bottom:1px;">
+                            <input type="number" id="futures-tp" placeholder="TP Target" step="0.01" oninput="runLiveLeverageEstimator()">
+                            <input type="number" id="futures-sl" placeholder="SL Target" step="0.01" oninput="runLiveLeverageEstimator()">
+                            <input type="number" id="futures-tsl" placeholder="TSL %" step="0.1" style="border-color:#e040fb;">
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                            <button style="background:var(--buy-color); color:#fff;" onclick="handleFuturesAction('long')">Long</button>
+                            <button style="background:var(--sell-color); color:#fff;" onclick="handleFuturesAction('short')">Short</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="dash-msg" style="margin:1px 0; font-size:8.5px; font-weight:bold; height:10px; overflow:hidden; text-align:center;"></div>
+            </div>
+
+            <div class="panel-column">
+                <div class="sub-tab-panel">
+                    <button class="sub-tab-btn active" id="tab-btn-ledger" onclick="switchRightPanelTab('ledger')">Depth</button>
+                    <button class="sub-tab-btn" id="tab-btn-positions" onclick="switchRightPanelTab('positions')">Pos</button>
+                    <button class="sub-tab-btn" id="tab-btn-bot" onclick="switchRightPanelTab('bot')">Bot</button>
+                    <button class="sub-tab-btn" id="tab-btn-copy" onclick="switchRightPanelTab('copy')">Copy</button>
+                </div>
+
+                <div id="tab-content-ledger" class="display-list-box" style="height:100%;">
+                    <h2>📊 Ledger Order Depth</h2>
+                    <div id="orderbook-box" style="margin-bottom:3px;"></div>
+                </div>
+
+                <div id="tab-content-positions" class="display-list-box hidden" style="height:100%;">
+                    <h2>🔥 Active Contracts</h2>
+                    <div id="futures-positions-box"></div>
+                </div>
+
+                <div id="tab-content-bot" class="display-list-box hidden" style="height:100%;">
+                    <h2>🤖 Grid Strategy Engine</h2>
+                    <input type="number" id="bot-lower" placeholder="Lower Bound" style="margin-bottom:1px;">
+                    <input type="number" id="bot-upper" placeholder="Upper Bound" style="margin-bottom:1px;">
+                    <button style="background:#e040fb; color:#fff;" onclick="toggleGridTradingBot()">Deploy Grid Bot</button>
+                    <div id="bot-status-readout" style="font-size:8px; margin-top:3px; color:var(--text-sub);">Bot Status: Dormant</div>
+                </div>
+
+                <div id="tab-content-copy" class="display-list-box hidden" style="height:100%;">
+                    <h2>👥 Social Copy Sync Stream</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding:2px 0;">
+                        <span>WhaleAlpha (ROI: 142%)</span>
+                        <button style="width:40px; height:12px; font-size:7.5px; margin:0;" onclick="toggleCopyTradeProfile('WhaleAlpha')">Mirror</button>
+                    </div>
+                    <div id="copy-status-readout" style="font-size:8px; margin-top:2px; color:var(--text-sub);">Mirror Status: Unlinked</div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                    <h2>📋 Wire Event History</h2>
+                    <button onclick="exportHistoryToCSV()" style="width:55px; height:11px; font-size:7px; background:#1c1e24; color:#29b6f6; margin:0;">Export CSV</button>
+                </div>
+                <div id="history-log" class="display-list-box" style="height:55px; flex-grow:0;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null; let mainInterval = null;
+        let activeChartStyle = "candles"; let showingSma = false; let showingRsi = false;
+        let currentGridLayout = "1x1"; let botActive = false; let copyTradingActive = false;
+        let peakEquityVal = 25000;
+        
+        let coinsMap = {
+            BTC: { price: 62500, change: 1.2 }, ETH: { price: 3450, change: -0.4 },
+            BNB: { price: 580, change: 2.1 }, SOL: { price: 145, change: -1.5 },
+            XRP: { price: 0.52, change: 0.2 }, ADA: { price: 0.45, change: -0.8 },
+            AVAX: { price: 32, change: 4.5 }, DOT: { price: 6.1, change: -2.3 },
+            LINK: { price: 14, change: 0.9 }, MATIC: { price: 0.6, change: -1.1 },
+            DOGE: { price: 0.12, change: 5.2 }, SHIB: { price: 0.000017, change: -3.4 },
+            TRX: { price: 0.11, change: 0.4 }, LTC: { price: 78, change: 1.1 },
+            UNI: { price: 7.8, change: -0.9 }, ATOM: { price: 8.4, change: -2.1 },
+            XLM: { price: 0.09, change: 0.1 }, NEAR: { price: 4.8, change: 3.2 },
+            ICP: { price: 8.1, change: -1.4 }, FIL: { price: 4.3, change: -0.5 },
+            LUNC: { price: 0.00008, change: 12.5 }, APT: { price: 6.9, change: 2.4 },
+            HBAR: { price: 0.07, change: -0.3 }, VET: { price: 0.02, change: 0.0 },
+            OP: { price: 1.8, change: -1.8 }, ARB: { price: 0.8, change: -2.5 },
+            MKR: { price: 2150, change: 3.1 }, GRT: { price: 0.16, change: 0.8 },
+            THETA: { price: 1.2, change: -1.0 }, FTM: { price: 0.5, change: 4.1 },
+            RUNE: { price: 4.1, change: 1.7 }, AAVE: { price: 92, change: -0.6 },
+            ALGO: { price: 0.13, change: -1.2 }, FLOW: { price: 0.6, change: 0.2 },
+            EGLD: { price: 28, change: -1.9 }, SAND: { price: 0.3, change: -3.1 },
+            MANA: { price: 0.3, change: -2.8 }, AXS: { price: 5.4, change: 0.5 },
+            CHZ: { price: 0.07, change: -0.9 }, EOS: { price: 0.5, change: -0.2 },
+            NEO: { price: 11.2, change: 1.4 }, IOTA: { price: 0.16, change: -0.5 },
+            ZEC: { price: 31, change: 0.8 }, DASH: { price: 24, change: -1.1 },
+            XMR: { price: 162, change: 0.3 }
+        };
+
+        for(let k in coinsMap) { coinsMap[k].openPrice = coinsMap[k].price; }
+
+        let currentChartToken = "BTC"; let timeframeSeconds = 1;
+        let chartInstance1 = null; let chartInstance2 = null;
+        let candleSeries1 = null; let lineSeries1 = null; let smaSeries1 = null; let rsiSeries1 = null;
+        let candleSeries2 = null;
+        let currentBar = null; let historicalCandles = [];
+
+        window.onload = function() {
+            const dSel = document.getElementById('dob-day');
+            for(let i=1; i<=31; i++) dSel.options.add(new Option(i, i));
+            const ySel = document.getElementById('dob-year');
+            for(let i=2026; i>=1930; i--) ySel.options.add(new Option(i, i));
+        };
+
+        function handleAuth() {
+            const user = document.getElementById('username').value.trim().toLowerCase();
+            const token2fa = document.getElementById('auth-2fa').value.trim();
+            if (!user) return;
+            
+            // Simulating basic required 2FA token check
+            if (!token2fa) {
+                alert("Security policy requires a valid 2FA validation sequence key.");
+                return;
+            }
+
+            let allUsers = JSON.parse(localStorage.getItem('vault_users')) || {};
+            if (!allUsers[user]) {
+                let starterAssets = {}; for (let k in coinsMap) starterAssets[k] = 0;
+                allUsers[user] = { cashDeposits: [{amount: 25000, source: 'System Starter'}], assets: starterAssets, futuresPositions: [], history: [], stats: { wins: 0, losses: 0 } };
+                localStorage.setItem('vault_users', JSON.stringify(allUsers));
+            }
+            currentUser = user;
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            
+            buildAssetInputDropdownList();
+            initializeTradingViewChart();
+            renderHeatmapMatrix();
+            
+            mainInterval = setInterval(() => {
+                runMarketTickPipeline();
+                processLiquidationAndTrailingRiskEngines();
+                runAlgorithmicAutomationCycles();
+                updateDashboardView();
+            }, 1000);
+        }
+
+        function runLiveLeverageEstimator() {
+            let margin = parseFloat(document.getElementById('futures-margin').value) || 0;
+            let lev = parseInt(document.getElementById('futures-leverage').value) || 1;
+            let currentPrice = coinsMap[currentChartToken].price;
+            let tp = parseFloat(document.getElementById('futures-tp').value) || 0;
+            let sl = parseFloat(document.getElementById('futures-sl').value) || 0;
+
+            document.getElementById('calc-liq').textContent = margin > 0 ? `$${(currentPrice * (1 - (1 / lev) * 0.9)).toFixed(1)}` : "-";
+            if (tp > 0 && sl > 0) {
+                let potentialWin = Math.abs(tp - currentPrice);
+                let potentialLoss = Math.abs(currentPrice - sl);
+                document.getElementById('calc-rr').textContent = potentialLoss > 0 ? `1:${(potentialWin / potentialLoss).toFixed(1)}` : "-";
+            } else {
+                document.getElementById('calc-rr').textContent = "-";
+            }
+        }
+
+        function initializeTradingViewChart() {
+            const c1 = document.getElementById('chart-container-1'); c1.innerHTML = "";
+            chartInstance1 = LightweightCharts.createChart(c1, {
+                width: c1.clientWidth, height: 160,
+                layout: { background: { color: '#101114' }, textColor: '#67707b' },
+                grid: { vertLines: { visible: false }, horzLines: { color: '#1c1e24' } },
+                timeScale: { timeVisible: true, secondsVisible: true }
+            });
+            candleSeries1 = chartInstance1.addCandlestickSeries({ upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false, visible: activeChartStyle==="candles" });
+            lineSeries1 = chartInstance1.addLineSeries({ color: '#29b6f6', lineWidth: 1.5, visible: activeChartStyle==="line" });
+            smaSeries1 = chartInstance1.addLineSeries({ color: '#e040fb', lineWidth: 1, visible: showingSma });
+            rsiSeries1 = chartInstance1.addLineSeries({ color: '#00e5ff', lineWidth: 1, visible: showingRsi });
+
+            let basePrice = coinsMap[currentChartToken].price;
+            let chunkTime = Math.floor(Date.now() / 1000) - 40;
+            historicalCandles = [];
+            for (let i = 0; i < 40; i++) {
+                let close = basePrice + (Math.random() * 4 - 2);
+                historicalCandles.push({ time: chunkTime, open: basePrice, high: Math.max(basePrice, close)+1, low: Math.min(basePrice, close)-1, close });
+                chunkTime += timeframeSeconds; basePrice = close;
+            }
+            syncChartDataStreams();
+            currentBar = { time: chunkTime, open: basePrice, high: basePrice, low: basePrice, close: basePrice };
+        }
+
+        function syncChartDataStreams() {
+            if (activeChartStyle === "candles") candleSeries1.setData(historicalCandles);
+            if (activeChartStyle === "line") lineSeries1.setData(historicalCandles.map(x => ({ time: x.time, value: x.close })));
+            recalculateIndicators();
+        }
+
+        function changeChartGridLayout() {
+            currentGridLayout = document.getElementById('grid-layout-select').value;
+            const c2 = document.getElementById('chart-container-2');
+            const wrapper = document.getElementById('chart-grid-wrapper');
+            if (currentGridLayout === "1x2") {
+                wrapper.style.gridTemplateColumns = "1fr 1fr"; c2.classList.remove('hidden');
+                chartInstance2 = LightweightCharts.createChart(c2, {
+                    width: c2.clientWidth, height: 160,
+                    layout: { background: { color: '#101114' }, textColor: '#67707b' },
+                    grid: { vertLines: false, horzLines: false }
+                });
+                candleSeries2 = chartInstance2.addCandlestickSeries({ upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false });
+                candleSeries2.setData(historicalCandles);
+            } else {
+                wrapper.style.gridTemplateColumns = "1fr"; c2.classList.add('hidden');
+            }
+        }
+
+        function toggleRsiIndicator() {
+            showingRsi = !showingRsi;
+            document.getElementById('rsi-toggle-btn').textContent = `RSI (${showingRsi ? 'On' : 'Off'})`;
+            rsiSeries1.applyOptions({ visible: showingRsi });
+            if (showingRsi) recalculateIndicators();
+        }
+
+        function toggleSmaIndicator() {
+            showingSma = !showingSma;
+            document.getElementById('sma-toggle-btn').textContent = `SMA (${showingSma ? 'On' : 'Off'})`;
+            smaSeries1.applyOptions({ visible: showingSma });
+            if (showingSma) recalculateIndicators();
+        }
+
+        function recalculateIndicators() {
+            if (showingSma) {
+                smaSeries1.setData(historicalCandles.map((c, i) => {
+                    let slice = historicalCandles.slice(Math.max(0, i-5), i+1);
+                    return { time: c.time, value: slice.reduce((a,b)=>a+b.close,0)/slice.length };
+                }));
+            }
+            if (showingRsi) {
+                rsiSeries1.setData(historicalCandles.map((c, i) => ({ time: c.time, value: 50 + (Math.sin(i) * 20) })));
+            }
+        }
+
+        function runMarketTickPipeline() {
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            
+            // Simulating Live Network Ping variation
+            document.getElementById('network-ping').textContent = `${Math.floor(10 + Math.random() * 25)}ms`;
+
+            for (let token in coinsMap) {
+                let obj = coinsMap[token]; let old = obj.price;
+                obj.price += (Math.random() * (obj.price * 0.0007) * (Math.random() > 0.5 ? 1 : -1));
+                obj.change += (Math.random() * 0.1 * (Math.random() > 0.5 ? 1 : -1));
+
+                if (token === currentChartToken && candleSeries1) {
+                    if (!currentBar || nowSeconds >= currentBar.time + timeframeSeconds) {
+                        if (currentBar) historicalCandles.push(currentBar);
+                        currentBar = { time: nowSeconds, open: old, high: Math.max(old, obj.price), low: Math.min(old, obj.price), close: obj.price };
+                    } else {
+                        currentBar.close = obj.price; currentBar.high = Math.max(currentBar.high, obj.price); currentBar.low = Math.min(currentBar.low, obj.price);
+                    }
+                    if (activeChartStyle === "candles") candleSeries1.update(currentBar);
+                    if (activeChartStyle === "line") lineSeries1.update({ time: currentBar.time, value: currentBar.close });
+                    if (candleSeries2 && currentGridLayout === "1x2") candleSeries2.update(currentBar);
+                }
+            }
+            renderOrderBookComponent();
+        }
+
+        function renderHeatmapMatrix() {
+            const container = document.getElementById('heatmap-container'); container.innerHTML = "";
+            let keys = Object.keys(coinsMap).slice(0, 18);
+            keys.forEach(k => {
+                let cell = document.createElement('div'); cell.className = 'heatmap-cell';
+                let chg = coinsMap[k].change; cell.style.background = chg >= 0 ? '#0ecb81' : '#f6465d';
+                cell.textContent = k; cell.onclick = () => { document.getElementById('asset-select').value = k; switchChartFocusAsset(); };
+                container.appendChild(cell);
+            });
+        }
+
+        function processLiquidationAndTrailingRiskEngines() {
+            let allUsers = JSON.parse(localStorage.getItem('vault_users')) || {};
+            let userData = allUsers[currentUser]; if (!userData || !userData.futuresPositions) return;
+
+            userData.futuresPositions = userData.futuresPositions.filter(pos => {
+                let live = coinsMap[pos.asset].price;
+                let diff = pos.direction === 'long' ? live - pos.entryPrice : pos.entryPrice - live;
+                let pnl = pos.margin * (diff / pos.entryPrice) * pos.leverage;
+
+                if (pos.tsl) {
+                    if (!pos.highestPnL) pos.highestPnL = pnl;
+                    if (pnl > pos.highestPnL) pos.highestPnL = pnl;
+                    if (pos.highestPnL > 0 && (pos.highestPnL - pnl) > (pos.margin * (pos.tsl / 100))) {
+                        executeExitRoute(userData, pos, pnl, "TSL"); return false;
+                    }
+                }
+                if (pnl <= -pos.margin * 0.85) {
+                    if(!userData.stats) userData.stats = { wins: 0, losses: 0 }; userData.stats.losses++;
+                    userData.history.push({ time: new Date().toLocaleTimeString(), msg: `💀 LIQ: ${pos.asset}` }); return false;
+                }
+                if (pos.tp && ((pos.direction === 'long' && live >= pos.tp) || (pos.direction === 'short' && live <= pos.tp))) {
+                    executeExitRoute(userData, pos, pnl, "TP"); return false;
+                }
+                if (pos.sl && ((pos.direction === 'long' && live <= pos.sl) || (pos.direction === 'short' && live >= pos.sl))) {
+                    executeExitRoute(userData, pos, pnl, "SL"); return false;
+                }
+                return true;
+            });
+            allUsers[currentUser] = userData; localStorage.setItem('vault_users', JSON.stringify(allUsers));
+        }
+
+        function runAlgorithmicAutomationCycles() {
+            if (botActive) {
+                let currentPrice = coinsMap[currentChartToken].price;
+                document.getElementById('bot-status-readout').textContent = `Bot Active: Grid at $${currentPrice.toFixed(1)}`;
+            }
+        }
+
+        function triggerGlobalPanicCloseAll() {
+            let allUsers = JSON.parse(localStorage.getItem('vault_users'));
+            let userData = allUsers[currentUser]; if (!userData) return;
+            
+            userData.futuresPositions.forEach(pos => {
+                let live = coinsMap[pos.asset].price;
+                let diff = pos.direction === 'long' ? live - pos.entryPrice : pos.entryPrice - live;
+                let pnl = pos.margin * (diff / pos.entryPrice) * pos.leverage;
+                userData.cashDeposits.push({ amount: Math.max(0, pos.margin + pnl) });
+            });
+            userData.futuresPositions = [];
+            for (let k in userData.assets) { userData.assets[k] = 0; }
+            userData.history.push({ time: new Date().toLocaleTimeString(), msg: "🚨 PANIC EXECUTED" });
+            localStorage.setItem('vault_users', JSON.stringify(allUsers)); updateDashboardView();
+        }
+
+        function toggleGridTradingBot() {
+            botActive = !botActive;
+            document.getElementById('bot-status-readout').textContent = botActive ? "Bot Status: Running grid..." : "Bot Status: Dormant";
+        }
+
+        function toggleCopyTradeProfile(prof) {
+            copyTradingActive = !copyTradingActive;
+            document.getElementById('copy-status-readout').textContent = copyTradingActive ? `Mirroring: ${prof}` : "Mirror Status: Unlinked";
+        }
+
+        function executeExitRoute(user, pos, pnl, reason) {
+            user.cashDeposits.push({ amount: Math.max(0, pos.margin + pnl) });
+            if(!user.stats) user.stats = { wins: 0, losses: 0 };
+            if (pnl >= 0) user.stats.wins++; else user.stats.losses++;
+            user.history.push({ time: new Date().toLocaleTimeString(), msg: `${reason}: ${pos.asset} ($${pnl.toFixed(0)})` });
+        }
+
+        function updateDashboardView() {
+            let allUsers = JSON.parse(localStorage.getItem('vault_users')) || {};
+            let userData = allUsers[currentUser]; if (!userData) return;
+
+            let cash = 0; userData.cashDeposits.forEach(d => cash += d.amount); let totalNet = cash;
+            let positionsHTML = "";
+            userData.futuresPositions.forEach((pos, idx) => {
+                let live = coinsMap[pos.asset].price;
+                let diff = pos.direction === 'long' ? live - pos.entryPrice : pos.entryPrice - live;
+                let pnl = pos.margin * (diff / pos.entryPrice) * pos.leverage; totalNet += pnl;
+                positionsHTML += `<div class="flex-row-item"><span>${pos.asset} ${pos.leverage}x</span><span style="color:${pnl>=0?'var(--buy-color)':'var(--sell-color)'};">$${pnl.toFixed(1)}</span></div>`;
+            });
+            document.getElementById('futures-positions-box').innerHTML = positionsHTML || "No active fields.";
+
+            document.getElementById('balance-display').textContent = totalNet.toFixed(2);
+            document.getElementById('available-display').textContent = cash.toFixed(2);
+            
+            if (totalNet > peakEquityVal) { peakEquityVal = totalNet; document.getElementById('equity-peak-val').textContent = `$${peakEquityVal.toFixed(0)}`; }
+
+            let legend = document.getElementById('allocation-legend-box'); legend.innerHTML = `<div>Cash: $${cash.toFixed(0)}</div>`;
+            let watchlistHTML = "";
+            for (let token in coinsMap) {
+                watchlistHTML += `<div class="flex-row-item" style="cursor:pointer;" onclick="document.getElementById('asset-select').value='${token}'; switchChartFocusAsset();"><span><strong>${token}</strong></span><span style="color:${coinsMap[token].change>=0?'var(--buy-color)':'var(--sell-color)'}">$${coinsMap[token].price.toFixed(2)}</span></div>`;
+            }
+            document.getElementById('watchlist-box').innerHTML = watchlistHTML;
+            document.getElementById('history-log').innerHTML = userData.history ? userData.history.slice(-3).map(h => `[${h.time.split(' ')[0]}] ${h.msg}`).reverse().join('<br>') : "";
+        }
+
+        function handleExchangeAction(action) {
+            const asset = document.getElementById('asset-select').value;
+            const qty = parseFloat(document.getElementById('asset-qty').value); if (isNaN(qty) || qty <= 0) return;
+            let allUsers = JSON.parse(localStorage.getItem('vault_users'));
+            let cost = coinsMap[asset].price * qty;
+
+            if (action === 'buy') {
+                let avail = 0; allUsers[currentUser].cashDeposits.forEach(d => avail += d.amount); if (cost > avail) return;
+                deductCash(allUsers[currentUser], cost); allUsers[currentUser].assets[asset] = (allUsers[currentUser].assets[asset] || 0) + qty;
+                allUsers[currentUser].history.push({ time: new Date().toLocaleTimeString(), msg: `🛒 Bought Spot ${qty} ${asset}` });
+            } else {
+                if ((allUsers[currentUser].assets[asset] || 0) < qty) return;
+                allUsers[currentUser].assets[asset] -= qty; allUsers[currentUser].cashDeposits.push({ amount: cost });
+                allUsers[currentUser].history.push({ time: new Date().toLocaleTimeString(), msg: `💰 Sold Spot ${qty} ${asset}` });
+            }
+            localStorage.setItem('vault_users', JSON.stringify(allUsers)); updateDashboardView();
+        }
+
+        function handleFuturesAction(direction) {
+            const margin = parseFloat(document.getElementById('futures-margin').value);
+            const lev = parseInt(document.getElementById('futures-leverage').value);
+            const tp = parseFloat(document.getElementById('futures-tp').value) || null;
+            const sl = parseFloat(document.getElementById('futures-sl').value) || null;
+            const tsl = parseFloat(document.getElementById('futures-tsl').value) || null;
+            if (isNaN(margin) || margin <= 0) return;
+            
+            let allUsers = JSON.parse(localStorage.getItem('vault_users'));
+            let avail = 0; allUsers[currentUser].cashDeposits.forEach(d => avail += d.amount); if (margin > avail) return;
+
+            deductCash(allUsers[currentUser], margin);
+            allUsers[currentUser].futuresPositions.push({ asset: currentChartToken, direction, margin, leverage: lev, entryPrice: coinsMap[currentChartToken].price, tp, sl, tsl });
+            allUsers[currentUser].history.push({ time: new Date().toLocaleTimeString(), msg: `🚀 Entered ${direction.toUpperCase()} ${currentChartToken}` });
+            localStorage.setItem('vault_users', JSON.stringify(allUsers)); updateDashboardView();
+        }
+
+        function handleCashAction(type) {
+            const val = parseFloat(document.getElementById('cash-amount').value);
+            if (isNaN(val) || val <= 0) return;
+            
+            let allUsers = JSON.parse(localStorage.getItem('vault_users'));
+            if (type === 'deposit') {
+                const source = document.getElementById('deposit-source-select').value;
+                allUsers[currentUser].cashDeposits.push({ amount: val, source: source });
+                allUsers[currentUser].history.push({ 
+                    time: new Date().toLocaleTimeString(), 
+                    msg: `💰 Funded +$${val.toFixed(0)} via ${source}` 
+                });
+            }
+            localStorage.setItem('vault_users', JSON.stringify(allUsers));
+            updateDashboardView();
+        }
+
+        // Feature: CSV Transaction Audit Log Exporter
+        function exportHistoryToCSV() {
+            let allUsers = JSON.parse(localStorage.getItem('vault_users')) || {};
+            let userData = allUsers[currentUser];
+            if(!userData || !userData.history || userData.history.length === 0) {
+                alert("No structural wire log records available to export."); return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,Timestamp,Event Message\n" 
+                + userData.history.map(e => `"${e.time}","${e.msg}"`).join("\n");
+            
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${currentUser}_trade_history.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function switchRightPanelTab(tab) {
+            ['ledger', 'positions', 'bot', 'copy'].forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+            });
+            document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tab}`).classList.add('active');
+        }
+
+        function renderOrderBookComponent() {
+            let mid = coinsMap[currentChartToken].price;
+            document.getElementById('orderbook-box').innerHTML = `<div class='orderbook-row' style='color:var(--sell-color);'><span>$${(mid*1.0002).toFixed(1)}</span><span>${(Math.random()*2).toFixed(1)}</span><span>Ask</span></div><div class='orderbook-row' style='color:var(--buy-color);'><span>$${(mid*0.9998).toFixed(1)}</span><span>${(Math.random()*2).toFixed(1)}</span><span>Bid</span></div>`;
+        }
+
+        function buildAssetInputDropdownList() {
+            const s = document.getElementById('asset-select'); s.innerHTML = "";
+            for (let t in coinsMap) s.options.add(new Option(t, t));
+        }
+
+        function switchChartTimeframe(sec) { timeframeSeconds = sec; initializeTradingViewChart(); }
+        function changeChartStyle() { activeChartStyle = document.getElementById('chart-style-select').value; initializeTradingViewChart(); }
+        function switchChartFocusAsset() { currentChartToken = document.getElementById('asset-select').value; document.getElementById('active-chart-token').textContent = currentChartToken; initializeTradingViewChart(); }
+        function deductCash(user, amt) { let rem = amt; for (let i = 0; i < user.cashDeposits.length; i++) { if (user.cashDeposits[i].amount <= rem) { rem -= user.cashDeposits[i].amount; user.cashDeposits.splice(i, 1); i--; } else { user.cashDeposits[i].amount -= rem; break; } } }
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
